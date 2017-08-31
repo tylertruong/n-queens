@@ -35,24 +35,30 @@ window.countNRooksSolutions = function(n) {
 var findAllRooksSolutions = function(n) {
   let result = [];
   let board = new Board({n: n});
+  let occupiedColumns = [];
 
   var recursiveFunc = function(rowIndex) {
     for (var i = 0; i < n; i++) {
-      // try each position at row rowIndex, and set it in the board
-      var rowToBeSet = genRow(i, n);
-      board.set(rowIndex, rowToBeSet);
-      // valid board
-      if (!board.hasAnyRooksConflicts()) {
+      if (!occupiedColumns[i]) {
+        // try each position at row rowIndex, and set it in the board
+        // should never result in a column conflict because we checked that the column has not been occupied
+        var rowToBeSet = genRow(i, n);
+        board.set(rowIndex, rowToBeSet);
         if (rowIndex === n - 1) {
           // valid and complete
           result.push(board.rows());
         } else {
-          // valid but incomplete, then fill in the next row
+          // valid but incomplete:
+          // mark that the column has been occupied   
+          occupiedColumns[i] = true;
+          // then fill in the next row   
           recursiveFunc(rowIndex + 1);
         }
+        // reset the row to all 0s
+        clearRow(board, rowIndex);
+        // mark that the column is no longer occupied for parent node to recurse down another path
+        occupiedColumns[i] = false;
       }
-      // reset the row to all 0s
-      clearRow(board, rowIndex);
     }
   };
   recursiveFunc(0);
@@ -92,24 +98,40 @@ window.countNQueensSolutions = function(n) {
 var findAllQueensSolutions = function(n) {
   let result = [];
   let board = new Board({n: n});
+  let occupiedColumns = [];
+  let occupiedMajorDiagonal = [];
+  let occupiedMinorDiagonal = [];
 
   var recursiveFunc = function(rowIndex) {
     for (var i = 0; i < n; i++) {
-      // try each position at row rowIndex, and set it in the board
-      var rowToBeSet = genRow(i, n);
-      board.set(rowIndex, rowToBeSet);
-      // valid board
-      if (!board.hasAnyQueensConflicts()) {
+      var majorDiagonalIndex = (i - rowIndex) + 3;
+      var minorDiagonalIndex = i + rowIndex;
+      if (!(occupiedColumns[i] || occupiedMajorDiagonal[majorDiagonalIndex] || occupiedMinorDiagonal[minorDiagonalIndex])) {
+        // try each position at row rowIndex, and set it in the board
+        // should never result in a column/diagonal conflict because we checked that the column/diagonal has not been occupied
+        var rowToBeSet = genRow(i, n);
+        board.set(rowIndex, rowToBeSet);
+        // valid board
         if (rowIndex === n - 1) {
           // valid and complete
           result.push(board.rows());
         } else {
-          // valid but incomplete, then fill in the next row
+          // valid but incomplete:
+          // mark column and diagonals as occupied
+          occupiedColumns[i] = true;
+          occupiedMajorDiagonal[majorDiagonalIndex] = true;
+          occupiedMinorDiagonal[minorDiagonalIndex] = true;
+          // then fill in the next row
           recursiveFunc(rowIndex + 1);
         }
+        
+        // reset the row to all 0s
+        clearRow(board, rowIndex);
+        // mark that the column and diagonals is no longer occupied for parent node to recurse down another path
+        occupiedColumns[i] = false;
+        occupiedMajorDiagonal[majorDiagonalIndex] = false;
+        occupiedMinorDiagonal[minorDiagonalIndex] = false;
       }
-      // reset the row to all 0s
-      clearRow(board, rowIndex);
     }
   };
   recursiveFunc(0);
