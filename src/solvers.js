@@ -72,13 +72,16 @@ var findAllSolutions = function(n, hasDiagonalConflicts) {
   let mirrorResult = [];
   let centerResult = [];
   let matrix = [];
-  for (let i = 0; i < n; i++) {
-    let row = [];
-    for (let j = 0; j < n; j++) {
-      row.push(0);
-    }
-    matrix.push(row);
+  for (var i = 0; i < n; i++) {
+    matrix.push(0);
   }
+  // for (let i = 0; i < n; i++) {
+  //   let row = [];
+  //   for (let j = 0; j < n; j++) {
+  //     row.push(0);
+  //   }
+  //   matrix.push(row);
+  // }
   let occupiedColumns = [];
   let occupiedMajorDiagonal = [];
   let occupiedMinorDiagonal = [];
@@ -102,14 +105,15 @@ var findAllSolutions = function(n, hasDiagonalConflicts) {
       if (validSlot) {
         // try each position at row rowIndex, and set it in the board
         // should never result in a column/diagonal conflict because we checked that the column/diagonal has not been occupied
-        matrix[rowIndex][colIndex] = 1;        
+        // matrix[rowIndex][colIndex] = 1; 
+        matrix[rowIndex] = 2 ** (n - colIndex - 1);       
 
         // valid board
         if (rowIndex === n - 1) {
           // valid and complete: make a copy of the matrix
           var matrixCopy = matrix.slice();
-          matrixCopy = _.map(matrixCopy, row => row.slice());
-          if (n % 2 === 1 && matrix[0][Math.floor(n / 2)]) {
+          // matrixCopy = _.map(matrixCopy, row => row.slice());
+          if (n % 2 === 1 && matrix[0] === 2 ** ((n - 1) / 2)) {
             // solution starts at center column
             centerResult.push(matrixCopy);
           } else {
@@ -127,7 +131,7 @@ var findAllSolutions = function(n, hasDiagonalConflicts) {
         }
         
         // reset the slot to 0
-        matrix[rowIndex][colIndex] = 0;
+        matrix[rowIndex] = 0;
 
         // mark that the column and diagonals is no longer occupied for parent node to recurse down another path
         occupiedColumns[colIndex] = false;
@@ -139,7 +143,8 @@ var findAllSolutions = function(n, hasDiagonalConflicts) {
   recursiveFunc(0);
 
   // combine solutions that start on the left half, center column (if n is odd) and right half
-  return mirrorResult.concat(centerResult).concat(mirrorSolutions(mirrorResult));
+  var bitResults = mirrorResult.concat(centerResult).concat(mirrorSolutions(mirrorResult));
+  return _.map(bitResults, solution => binArrToMatrix(solution, n));
 };
 
 
@@ -162,8 +167,32 @@ var genRow = function(i, n) {
   return result;
 };
 
+var binArrToMatrix = function(arr, n) {
+  var result = [];
+  for (var bin of arr) {
+    result.push(genRow(Math.log2(bin), n));
+  }
+  return result;
+};
+
 var mirrorSolutions = function(solutions) {
-  return _.map(solutions, (matrix) => {
-    return _.map(matrix, (row) => row.slice().reverse());
+  // return _.map(solutions, (matrix) => {
+  //   return _.map(matrix, (row) => row.slice().reverse());
+  // });
+  return _.map(solutions, solution => {
+    return _.map(solution, bin => mirrorBinaryString(bin, solution.length));
   });
 };
+
+// flips the n-digit binary number into a 'mirror' number
+var mirrorBinaryString = function(bin, n) {
+  return 2 ** (n - Math.log2(bin) - 1);
+};
+
+/*
+Time Complexity
+findNRooksSolution = O(n^n)
+findAllRooksSolution = O(n^n)
+countNQueensSolutions = O(n^n)
+findAllQueensSolutions = O(n^n)
+*/
