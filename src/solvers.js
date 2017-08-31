@@ -26,19 +26,24 @@ window.findNRooksSolution = function(n) {
 window.countNRooksSolutions = function(n) {
   let solutionCount = findAllRooksSolutionsMemoized(n).length;
 
-
   console.log('Number of solutions for ' + n + ' rooks:', solutionCount);
   return solutionCount;
 };
 
 
 var findAllRooksSolutions = function(n) {
-  let result = [];
+  let mirrorResult = [];
+  let centerResult = [];
   let board = new Board({n: n});
   let occupiedColumns = [];
 
   var recursiveFunc = function(rowIndex) {
     for (var i = 0; i < n; i++) {
+      // when traversing first row, only need to check left half of the board,
+      // because the mirror images of the solutions derived will be results from the other half of the board
+      if (rowIndex === 0 && i >= n / 2) {
+        continue;
+      }
       if (!occupiedColumns[i]) {
         // try each position at row rowIndex, and set it in the board
         // should never result in a column conflict because we checked that the column has not been occupied
@@ -46,7 +51,13 @@ var findAllRooksSolutions = function(n) {
         board.set(rowIndex, rowToBeSet);
         if (rowIndex === n - 1) {
           // valid and complete
-          result.push(board.rows());
+          if (n % 2 === 1 && board.get(0)[Math.floor(n / 2)]) {
+            // solution starts at center column
+            centerResult.push(board.rows());
+          } else {
+            // solution starts at left half of board
+            mirrorResult.push(board.rows());
+          }
         } else {
           // valid but incomplete:
           // mark that the column has been occupied   
@@ -63,7 +74,8 @@ var findAllRooksSolutions = function(n) {
   };
   recursiveFunc(0);
 
-  return result;
+  // combine solutions that start on the left half, center column (if n is odd) and right half
+  return mirrorResult.concat(centerResult).concat(mirrorSolutions(mirrorResult));
 };
 
 
@@ -96,7 +108,8 @@ window.countNQueensSolutions = function(n) {
 };
 
 var findAllQueensSolutions = function(n) {
-  let result = [];
+  let mirrorResult = [];
+  let centerResult = [];
   let board = new Board({n: n});
   let occupiedColumns = [];
   let occupiedMajorDiagonal = [];
@@ -104,6 +117,11 @@ var findAllQueensSolutions = function(n) {
 
   var recursiveFunc = function(rowIndex) {
     for (var i = 0; i < n; i++) {
+      // when traversing first row, only need to check left half of the board,
+      // because the mirror images of the solutions derived will be results from the other half of the board
+      if (rowIndex === 0 && i >= n / 2) {
+        continue;
+      }
       var majorDiagonalIndex = (i - rowIndex) + 3;
       var minorDiagonalIndex = i + rowIndex;
       if (!(occupiedColumns[i] || occupiedMajorDiagonal[majorDiagonalIndex] || occupiedMinorDiagonal[minorDiagonalIndex])) {
@@ -114,7 +132,13 @@ var findAllQueensSolutions = function(n) {
         // valid board
         if (rowIndex === n - 1) {
           // valid and complete
-          result.push(board.rows());
+          if (n % 2 === 1 && board.get(0)[Math.floor(n / 2)]) {
+            // solution starts at center column
+            centerResult.push(board.rows());
+          } else {
+            // solution starts at left half of board
+            mirrorResult.push(board.rows());
+          }
         } else {
           // valid but incomplete:
           // mark column and diagonals as occupied
@@ -136,7 +160,8 @@ var findAllQueensSolutions = function(n) {
   };
   recursiveFunc(0);
 
-  return result;
+  // combine solutions that start on the left half, center column (if n is odd) and right half
+  return mirrorResult.concat(centerResult).concat(mirrorSolutions(mirrorResult));
 };
 
 
@@ -157,4 +182,10 @@ var genRow = function(i, n) {
     }
   }
   return result;
+};
+
+var mirrorSolutions = function(solutions) {
+  return _.map(solutions, (matrix) => {
+    return _.map(matrix, (row) => row.slice().reverse());
+  });
 };
