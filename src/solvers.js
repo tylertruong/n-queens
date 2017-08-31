@@ -32,59 +32,7 @@ window.countNRooksSolutions = function(n) {
 
 
 var findAllRooksSolutions = function(n) {
-  let mirrorResult = [];
-  let centerResult = [];
-  let matrix = [];
-  for (let i = 0; i < n; i++) {
-    let row = [];
-    for (let j = 0; j < n; j++) {
-      row.push(0);
-    }
-    matrix.push(row);
-  }
-  let occupiedColumns = [];
-
-  var recursiveFunc = function(rowIndex) {
-    for (var colIndex = 0; colIndex < n; colIndex++) {
-      // when traversing first row, only need to check left half of the board,
-      // because the mirror images of the solutions derived will be results from the other half of the board
-      if (rowIndex === 0 && colIndex >= n / 2) {
-        continue;
-      }
-      if (!occupiedColumns[colIndex]) {
-        // try each position at row rowIndex, and set it in the board
-        // should never result in a column conflict because we checked that the column has not been occupied
-        matrix[rowIndex][colIndex] = 1;
-
-        if (rowIndex === n - 1) {
-          // valid and complete - make a copy of the matrix
-          var matrixCopy = matrix.slice();
-          matrixCopy = _.map(matrixCopy, row => row.slice());
-          if (n % 2 === 1 && matrix[0][Math.floor(n / 2)]) {
-            // solution starts at center column
-            centerResult.push(matrixCopy);
-          } else {
-            // solution starts at left half of board
-            mirrorResult.push(matrixCopy);
-          }
-        } else {
-          // valid but incomplete:
-          // mark that the column has been occupied   
-          occupiedColumns[colIndex] = true;
-          // then fill in the next row   
-          recursiveFunc(rowIndex + 1);
-        }
-        // reset the slot to 0
-        matrix[rowIndex][colIndex] = 0;
-        // mark that the column is no longer occupied for parent node to recurse down another path
-        occupiedColumns[colIndex] = false;
-      }
-    }
-  };
-  recursiveFunc(0);
-
-  // combine solutions that start on the left half, center column (if n is odd) and right half
-  return mirrorResult.concat(centerResult).concat(mirrorSolutions(mirrorResult));
+  return findAllSolutions(n, false);
 };
 
 
@@ -117,6 +65,10 @@ window.countNQueensSolutions = function(n) {
 };
 
 var findAllQueensSolutions = function(n) {
+  return findAllSolutions(n, true);
+}; 
+
+var findAllSolutions = function(n, hasDiagonalConflicts) {
   let mirrorResult = [];
   let centerResult = [];
   let matrix = [];
@@ -140,14 +92,21 @@ var findAllQueensSolutions = function(n) {
       }
       var majorDiagonalIndex = (colIndex - rowIndex) + 3;
       var minorDiagonalIndex = colIndex + rowIndex;
-      if (!(occupiedColumns[colIndex] || occupiedMajorDiagonal[majorDiagonalIndex] || occupiedMinorDiagonal[minorDiagonalIndex])) {
+
+      // check for column collisions
+      var validSlot = !occupiedColumns[colIndex];
+      // check whether it is a queen, if it is also checks diagonal collisions
+      if (hasDiagonalConflicts) {
+        validSlot = validSlot && !occupiedMajorDiagonal[majorDiagonalIndex] && !occupiedMinorDiagonal[minorDiagonalIndex];
+      }
+      if (validSlot) {
         // try each position at row rowIndex, and set it in the board
         // should never result in a column/diagonal conflict because we checked that the column/diagonal has not been occupied
         matrix[rowIndex][colIndex] = 1;        
 
         // valid board
         if (rowIndex === n - 1) {
-          // valid and complete - make a copy of the matrix
+          // valid and complete: make a copy of the matrix
           var matrixCopy = matrix.slice();
           matrixCopy = _.map(matrixCopy, row => row.slice());
           if (n % 2 === 1 && matrix[0][Math.floor(n / 2)]) {
