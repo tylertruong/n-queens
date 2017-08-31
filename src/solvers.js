@@ -34,41 +34,50 @@ window.countNRooksSolutions = function(n) {
 var findAllRooksSolutions = function(n) {
   let mirrorResult = [];
   let centerResult = [];
-  let board = new Board({n: n});
+  let matrix = [];
+  for (let i = 0; i < n; i++) {
+    let row = [];
+    for (let j = 0; j < n; j++) {
+      row.push(0);
+    }
+    matrix.push(row);
+  }
   let occupiedColumns = [];
 
   var recursiveFunc = function(rowIndex) {
-    for (var i = 0; i < n; i++) {
+    for (var colIndex = 0; colIndex < n; colIndex++) {
       // when traversing first row, only need to check left half of the board,
       // because the mirror images of the solutions derived will be results from the other half of the board
-      if (rowIndex === 0 && i >= n / 2) {
+      if (rowIndex === 0 && colIndex >= n / 2) {
         continue;
       }
-      if (!occupiedColumns[i]) {
+      if (!occupiedColumns[colIndex]) {
         // try each position at row rowIndex, and set it in the board
         // should never result in a column conflict because we checked that the column has not been occupied
-        var rowToBeSet = genRow(i, n);
-        board.set(rowIndex, rowToBeSet);
+        matrix[rowIndex][colIndex] = 1;
+
         if (rowIndex === n - 1) {
-          // valid and complete
-          if (n % 2 === 1 && board.get(0)[Math.floor(n / 2)]) {
+          // valid and complete - make a copy of the matrix
+          var matrixCopy = matrix.slice();
+          matrixCopy = _.map(matrixCopy, row => row.slice());
+          if (n % 2 === 1 && matrix[0][Math.floor(n / 2)]) {
             // solution starts at center column
-            centerResult.push(board.rows());
+            centerResult.push(matrixCopy);
           } else {
             // solution starts at left half of board
-            mirrorResult.push(board.rows());
+            mirrorResult.push(matrixCopy);
           }
         } else {
           // valid but incomplete:
           // mark that the column has been occupied   
-          occupiedColumns[i] = true;
+          occupiedColumns[colIndex] = true;
           // then fill in the next row   
           recursiveFunc(rowIndex + 1);
         }
-        // reset the row to all 0s
-        clearRow(board, rowIndex);
+        // reset the slot to 0
+        matrix[rowIndex][colIndex] = 0;
         // mark that the column is no longer occupied for parent node to recurse down another path
-        occupiedColumns[i] = false;
+        occupiedColumns[colIndex] = false;
       }
     }
   };
@@ -110,49 +119,59 @@ window.countNQueensSolutions = function(n) {
 var findAllQueensSolutions = function(n) {
   let mirrorResult = [];
   let centerResult = [];
-  let board = new Board({n: n});
+  let matrix = [];
+  for (let i = 0; i < n; i++) {
+    let row = [];
+    for (let j = 0; j < n; j++) {
+      row.push(0);
+    }
+    matrix.push(row);
+  }
   let occupiedColumns = [];
   let occupiedMajorDiagonal = [];
   let occupiedMinorDiagonal = [];
 
   var recursiveFunc = function(rowIndex) {
-    for (var i = 0; i < n; i++) {
+    for (var colIndex = 0; colIndex < n; colIndex++) {
       // when traversing first row, only need to check left half of the board,
       // because the mirror images of the solutions derived will be results from the other half of the board
-      if (rowIndex === 0 && i >= n / 2) {
+      if (rowIndex === 0 && colIndex >= n / 2) {
         continue;
       }
-      var majorDiagonalIndex = (i - rowIndex) + 3;
-      var minorDiagonalIndex = i + rowIndex;
-      if (!(occupiedColumns[i] || occupiedMajorDiagonal[majorDiagonalIndex] || occupiedMinorDiagonal[minorDiagonalIndex])) {
+      var majorDiagonalIndex = (colIndex - rowIndex) + 3;
+      var minorDiagonalIndex = colIndex + rowIndex;
+      if (!(occupiedColumns[colIndex] || occupiedMajorDiagonal[majorDiagonalIndex] || occupiedMinorDiagonal[minorDiagonalIndex])) {
         // try each position at row rowIndex, and set it in the board
         // should never result in a column/diagonal conflict because we checked that the column/diagonal has not been occupied
-        var rowToBeSet = genRow(i, n);
-        board.set(rowIndex, rowToBeSet);
+        matrix[rowIndex][colIndex] = 1;        
+
         // valid board
         if (rowIndex === n - 1) {
-          // valid and complete
-          if (n % 2 === 1 && board.get(0)[Math.floor(n / 2)]) {
+          // valid and complete - make a copy of the matrix
+          var matrixCopy = matrix.slice();
+          matrixCopy = _.map(matrixCopy, row => row.slice());
+          if (n % 2 === 1 && matrix[0][Math.floor(n / 2)]) {
             // solution starts at center column
-            centerResult.push(board.rows());
+            centerResult.push(matrixCopy);
           } else {
             // solution starts at left half of board
-            mirrorResult.push(board.rows());
+            mirrorResult.push(matrixCopy);
           }
         } else {
           // valid but incomplete:
           // mark column and diagonals as occupied
-          occupiedColumns[i] = true;
+          occupiedColumns[colIndex] = true;
           occupiedMajorDiagonal[majorDiagonalIndex] = true;
           occupiedMinorDiagonal[minorDiagonalIndex] = true;
           // then fill in the next row
           recursiveFunc(rowIndex + 1);
         }
         
-        // reset the row to all 0s
-        clearRow(board, rowIndex);
+        // reset the slot to 0
+        matrix[rowIndex][colIndex] = 0;
+
         // mark that the column and diagonals is no longer occupied for parent node to recurse down another path
-        occupiedColumns[i] = false;
+        occupiedColumns[colIndex] = false;
         occupiedMajorDiagonal[majorDiagonalIndex] = false;
         occupiedMinorDiagonal[minorDiagonalIndex] = false;
       }
