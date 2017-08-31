@@ -12,43 +12,101 @@
 
 
 // return a matrix (an array of arrays) representing a single nxn chessboard, with n rooks placed such that none of them can attack each other
-
-
-
 window.findNRooksSolution = function(n) {
-  var solution = findAllRooksSolutionsMemoized(n)[0];
-
+  var solution = findNSolution(n, false);
   console.log('Single solution for ' + n + ' rooks:', JSON.stringify(solution));
   return solution;
 };
 
-// return the number of nxn chessboards that exist, with n rooks placed such that none of them can attack each other
-window.countNRooksSolutions = function(n) {
-  let solutionCount = findAllRooksSolutionsMemoized(n).length;
-
-  console.log('Number of solutions for ' + n + ' rooks:', solutionCount);
-  return solutionCount;
-};
-
-
-var findAllRooksSolutions = function(n) {
-  return findAllSolutions(n, false);
-};
-
-
-var findAllRooksSolutionsMemoized = _.memoize(findAllRooksSolutions);
-
 // return a matrix (an array of arrays) representing a single nxn chessboard, with n queens placed such that none of them can attack each other
 window.findNQueensSolution = function(n) {
-  var solution = findAllQueensSolutionsMemoized(n)[0];
-
+  var solution = findNSolution(n, true);
   console.log('Single solution for ' + n + ' queens:', JSON.stringify(solution));
+  return solution;
+};
 
+// helper function
+window.findNSolution = function(n, hasDiagonalConflicts) {
+  let result;
+  // initialize empty matrix (all 0s)
+  let matrix = [];
+  for (var i = 0; i < n; i++) {
+    matrix.push(0);
+  }
+  let found = false;
+  // store information about which columns/diagonal lines are occupied
+  let occupiedColumns = [];
+  let occupiedMajorDiagonal = [];
+  let occupiedMinorDiagonal = [];
+
+  var recursiveFunc = function(rowIndex) {
+    for (var colIndex = 0; colIndex < n; colIndex++) {
+      // if solution is already found in previous calls, break out of loop
+      if (found) {
+        break;
+      }
+      // when traversing first row, only need to check left half of the board,
+      // because the mirror images of the solutions derived will be results from the other half of the board
+      if (rowIndex === 0 && colIndex >= n / 2) {
+        continue;
+      }
+      var majorDiagonalIndex = (colIndex - rowIndex) + 3;
+      var minorDiagonalIndex = colIndex + rowIndex;
+
+      // check for column collisions
+      var validSlot = !occupiedColumns[colIndex];
+      // check whether it is a queen, if it is also check for diagonal collisions
+      if (hasDiagonalConflicts) {
+        validSlot = validSlot && !occupiedMajorDiagonal[majorDiagonalIndex] && !occupiedMinorDiagonal[minorDiagonalIndex];
+      }
+      if (validSlot) {
+        // the current position should never result in a column/diagonal conflict
+        // because we checked that the column/diagonal has not been occupied
+
+        // use 2-based number to indicate where the piece is in the row
+        matrix[rowIndex] = 2 ** (n - colIndex - 1);       
+
+        // valid board
+        if (rowIndex === n - 1) {
+          // valid and complete: mark as found and store the matrix
+          found = true;
+          result = matrix;
+        } else {
+          // valid but incomplete: mark column and diagonals as occupied
+          occupiedColumns[colIndex] = true;
+          occupiedMajorDiagonal[majorDiagonalIndex] = true;
+          occupiedMinorDiagonal[minorDiagonalIndex] = true;
+          // then fill in the next row
+          recursiveFunc(rowIndex + 1);
+        }
+        
+        // only execute after previous recursive calls have returned with unsuccessful results (i.e. backtracking)
+        if (!found) {
+          // reset the row to 0
+          matrix[rowIndex] = 0;
+
+          // mark that the column and diagonals is no longer occupied for parent node to recurse down another path
+          occupiedColumns[colIndex] = false;
+          occupiedMajorDiagonal[majorDiagonalIndex] = false;
+          occupiedMinorDiagonal[minorDiagonalIndex] = false;
+        }
+      }
+    }
+  };
+  recursiveFunc(0);
+  
   // return empty matrix when there is no solution
-  if (!solution) {
+  if (!result) {
     return new Board({n: n}).rows();
   }
-  return solution;
+  return binArrToMatrix(result, n);
+};
+
+// return the number of nxn chessboards that exist, with n rooks placed such that none of them can attack each other
+window.countNRooksSolutions = function(n) {
+  var solutionCount = countNSolutions(n, false);
+  console.log('Number of solutions for ' + n + ' rooks:', solutionCount);
+  return solutionCount;
 };
 
 // return the number of nxn chessboards that exist, with n queens placed such that none of them can attack each other
@@ -58,33 +116,19 @@ window.countNQueensSolutions = function(n) {
     return 1;
   }
 
-  var solutionCount = findAllQueensSolutionsMemoized(n).length;
-
+  var solutionCount = countNSolutions(n, true);
   console.log('Number of solutions for ' + n + ' queens:', solutionCount);
   return solutionCount;
 };
 
-var findAllQueensSolutions = function(n) {
-  return findAllSolutions(n, true);
-}; 
-
-var findAllSolutions = function(n, hasDiagonalConflicts) {
-  let mirrorResult = [];
-  let centerResult = [];
-  let matrix = [];
-  for (var i = 0; i < n; i++) {
-    matrix.push(0);
-  }
-  // for (let i = 0; i < n; i++) {
-  //   let row = [];
-  //   for (let j = 0; j < n; j++) {
-  //     row.push(0);
-  //   }
-  //   matrix.push(row);
-  // }
+// helper function
+var countNSolutions = function(n, hasDiagonalConflicts) {
+  // initialize count to 0
+  let count = 0;
   let occupiedColumns = [];
   let occupiedMajorDiagonal = [];
   let occupiedMinorDiagonal = [];
+  let startCenter = false;
 
   var recursiveFunc = function(rowIndex) {
     for (var colIndex = 0; colIndex < n; colIndex++) {
@@ -98,40 +142,42 @@ var findAllSolutions = function(n, hasDiagonalConflicts) {
 
       // check for column collisions
       var validSlot = !occupiedColumns[colIndex];
-      // check whether it is a queen, if it is also checks diagonal collisions
+      // check whether it is a queen, if it is also check for diagonal collisions
       if (hasDiagonalConflicts) {
         validSlot = validSlot && !occupiedMajorDiagonal[majorDiagonalIndex] && !occupiedMinorDiagonal[minorDiagonalIndex];
       }
       if (validSlot) {
-        // try each position at row rowIndex, and set it in the board
-        // should never result in a column/diagonal conflict because we checked that the column/diagonal has not been occupied
-        // matrix[rowIndex][colIndex] = 1; 
-        matrix[rowIndex] = 2 ** (n - colIndex - 1);       
+        // the current position should never result in a column/diagonal conflict
+        // because we checked that the column/diagonal has not been occupied
+
+        // check whether the current piece is placed in the center position of the first row
+        // with an even 'n', this block will never get executed because it would have broken out of the loop in lines above
+        if (rowIndex === 0) {
+          if (colIndex === Math.floor(n / 2)) {
+            startCenter = true;
+          } else {
+            startCenter = false;
+          }
+        }
 
         // valid board
         if (rowIndex === n - 1) {
-          // valid and complete: make a copy of the matrix
-          var matrixCopy = matrix.slice();
-          // matrixCopy = _.map(matrixCopy, row => row.slice());
-          if (n % 2 === 1 && matrix[0] === 2 ** ((n - 1) / 2)) {
-            // solution starts at center column
-            centerResult.push(matrixCopy);
+          if (startCenter) {
+            // increment solutions count by 1 if it is a 'center' board
+            count++;
           } else {
-            // solution starts at left half of board
-            mirrorResult.push(matrixCopy);
+            // increment by 2 if it is a 'left' board, to account for mirror solutions on the 'right' board
+            count += 2;
           }
         } else {
-          // valid but incomplete:
-          // mark column and diagonals as occupied
+          // valid but incomplete: mark column and diagonals as occupied
           occupiedColumns[colIndex] = true;
           occupiedMajorDiagonal[majorDiagonalIndex] = true;
           occupiedMinorDiagonal[minorDiagonalIndex] = true;
+
           // then fill in the next row
           recursiveFunc(rowIndex + 1);
         }
-        
-        // reset the slot to 0
-        matrix[rowIndex] = 0;
 
         // mark that the column and diagonals is no longer occupied for parent node to recurse down another path
         occupiedColumns[colIndex] = false;
@@ -141,18 +187,8 @@ var findAllSolutions = function(n, hasDiagonalConflicts) {
     }
   };
   recursiveFunc(0);
-
-  // combine solutions that start on the left half, center column (if n is odd) and right half
-  var bitResults = mirrorResult.concat(centerResult).concat(mirrorSolutions(mirrorResult));
-  return _.map(bitResults, solution => binArrToMatrix(solution, n));
-};
-
-
-var findAllQueensSolutionsMemoized = _.memoize(findAllQueensSolutions);
-
-
-var clearRow = function(board, rowIndex) {
-  board.set(rowIndex, genRow(-1, board.get('n')));
+  
+  return count;
 };
 
 var genRow = function(i, n) {
@@ -173,20 +209,6 @@ var binArrToMatrix = function(arr, n) {
     result.push(genRow(Math.log2(bin), n));
   }
   return result;
-};
-
-var mirrorSolutions = function(solutions) {
-  // return _.map(solutions, (matrix) => {
-  //   return _.map(matrix, (row) => row.slice().reverse());
-  // });
-  return _.map(solutions, solution => {
-    return _.map(solution, bin => mirrorBinaryString(bin, solution.length));
-  });
-};
-
-// flips the n-digit binary number into a 'mirror' number
-var mirrorBinaryString = function(bin, n) {
-  return 2 ** (n - Math.log2(bin) - 1);
 };
 
 /*
